@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../components/task_item.dart';
 import '../models/task_model.dart';
 import '../services/api_service.dart';
 import 'profile_screen.dart';
+import 'calendar_screen.dart';
+import 'search_screen.dart';
+import 'analytics_screen.dart';
+import '../services/notification_service.dart';
+import '../services/theme_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   final String token;
+  final ThemeController? themeController;
 
-  const HomeScreen({super.key, required this.token});
+  const HomeScreen({super.key, required this.token, this.themeController});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -41,6 +48,9 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isBusy = true);
     try {
       final tasks = await _authorizedService.fetchTasks();
+      for (final task in tasks) {
+        await NotificationService.instance.schedule(task);
+      }
       if (mounted) setState(() => _tasks = tasks);
     } catch (e) {
       _showMessage('Failed to load tasks: $e', isError: true);
@@ -158,57 +168,83 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final screens = [
       _buildTaskScreen(),
+      CalendarScreen(tasks: _tasks, token: widget.token, onTaskUpdated: _loadTasks),
+      SearchScreen(tasks: _tasks, token: widget.token, onTaskUpdated: _loadTasks),
+      AnalyticsScreen(token: widget.token),
       ProfileScreen(token: widget.token),
+      _buildSettingsScreen(),
     ];
 
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: const Text('TaskFlow'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadTasks,
-          ),
-        ],
-      ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 350),
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          final offsetAnimation = Tween<Offset>(
-            begin: const Offset(0.0, 0.05),
-            end: Offset.zero,
-          ).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(position: offsetAnimation, child: child),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey<int>(_selectedIndex),
-          child: screens[_selectedIndex],
+    final content = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      child: KeyedSubtree(key: ValueKey<int>(_selectedIndex), child: screens[_selectedIndex]),
+    );
+    return Shortcuts(
+      shortcuts: const {SingleActivator(LogicalKeyboardKey.keyK, control: true): _SearchIntent()},
+      child: Actions(
+        actions: {_SearchIntent: CallbackAction<_SearchIntent>(onInvoke: (_) { setState(() => _selectedIndex = 2); return null; })},
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 1024;
+            if (!wide) return _buildCompactScaffold(content);
+            return Scaffold(
+              body: Row(children: [
+                _buildSidebar(),
+                Expanded(child: Column(children: [_buildTopBar(), Expanded(child: content)])),
+              ]),
+            );
+          },
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        selectedItemColor: const Color(0xFF22C55E),
-        unselectedItemColor: Colors.white70,
-        backgroundColor: const Color(0xFF111827),
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.task_alt),
-            label: 'Tasks',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Profile',
-          ),
-        ],
       ),
     );
   }
+
+  Widget _buildCompactScaffold(Widget content) => Scaffold(
+    appBar: AppBar(title: const Text('TaskFlow'), actions: [IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: _loadTasks)]),
+    body: content,
+    bottomNavigationBar: BottomNavigationBar(
+      currentIndex: _selectedIndex > 4 ? 4 : _selectedIndex,
+      selectedItemColor: const Color(0xFF22C55E), unselectedItemColor: Colors.white70, backgroundColor: const Color(0xFF111827),
+      onTap: (index) => setState(() => _selectedIndex = index),
+      items: const [BottomNavigationBarItem(icon: Icon(Icons.task_alt), label: 'Tasks'), BottomNavigationBarItem(icon: Icon(Icons.calendar_month_outlined), label: 'Calendar'), BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'), BottomNavigationBarItem(icon: Icon(Icons.insights_outlined), label: 'Analytics'), BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile')],
+    ),
+  );
+
+  Widget _buildSidebar() => Container(
+    width: 248, color: const Color(0xFF0B1228), padding: const EdgeInsets.fromLTRB(16, 28, 16, 20),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('TaskFlow', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900))),
+      const SizedBox(height: 32),
+      _navItem('Dashboard', Icons.grid_view_rounded, 0), _navItem('Tasks', Icons.task_alt, 0), _navItem('Calendar', Icons.calendar_month_outlined, 1), _navItem('Analytics', Icons.insights_outlined, 3), _navItem('Search', Icons.search, 2),
+      const Spacer(), _navItem('Profile', Icons.person_outline, 4), _navItem('Settings', Icons.settings_outlined, 5),
+    ]),
+  );
+
+  Widget _navItem(String label, IconData icon, int index) {
+    final selected = _selectedIndex == index;
+    return Padding(padding: const EdgeInsets.only(bottom: 6), child: ListTile(
+      selected: selected, selectedTileColor: const Color(0xFF6366F1).withOpacity(.22), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      leading: Icon(icon, color: selected ? const Color(0xFFA5B4FC) : Colors.white70), title: Text(label), onTap: () => setState(() => _selectedIndex = index),
+    ));
+  }
+
+  Widget _buildTopBar() => Container(height: 76, padding: const EdgeInsets.symmetric(horizontal: 28), decoration: const BoxDecoration(color: Color(0xFF111827), border: Border(bottom: BorderSide(color: Colors.white12))), child: Row(children: [Expanded(child: TextButton.icon(onPressed: () => setState(() => _selectedIndex = 2), icon: const Icon(Icons.search), label: const Text('Search tasks (Ctrl K)'))), IconButton(tooltip: 'Refresh', onPressed: _loadTasks, icon: const Icon(Icons.refresh)), IconButton(tooltip: 'Notifications', onPressed: () => _showMessage('Task reminders are kept in sync.'), icon: const Icon(Icons.notifications_none)), IconButton(tooltip: 'Toggle theme', onPressed: widget.themeController == null ? null : widget.themeController!.toggle, icon: const Icon(Icons.dark_mode_outlined)), const CircleAvatar(child: Icon(Icons.person_outline))])); /*
+    height: 76, padding: const EdgeInsets.symmetric(horizontal: 28), decoration: const BoxDecoration(color: Color(0xFF111827), border: Border(bottom: BorderSide(color: Colors.white12))),
+    child: Row(children: [
+      Expanded(child: InkWell(onTap: () => setState(() => _selectedIndex = 2), borderRadius: BorderRadius.circular(12), child: Container(height: 42, constraints: const BoxConstraints(maxWidth: 440), padding: const EdgeInsets.symmetric(horizontal: 14), decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(12)), child: const Row(children: [Icon(Icons.search, color: Colors.white54), SizedBox(width: 10), Text('Search tasks…', style: TextStyle(color: Colors.white54)), Spacer(), Text('Ctrl K', style: TextStyle(color: Colors.white38, fontSize: 12))]))),
+      IconButton(tooltip: 'Refresh', onPressed: _loadTasks, icon: const Icon(Icons.refresh)), IconButton(tooltip: 'Notifications', onPressed: () => _showMessage('Task reminders are kept in sync.'), icon: const Icon(Icons.notifications_none)),
+      IconButton(tooltip: 'Toggle theme', onPressed: widget.themeController == null ? null : widget.themeController!.toggle, icon: const Icon(Icons.dark_mode_outlined)), const SizedBox(width: 8), const CircleAvatar(child: Icon(Icons.person_outline)),
+    ]),
+  );
+
+  */ Widget _buildSettingsScreen() => ListView(padding: const EdgeInsets.all(28), children: [
+    const Text('Settings', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)), const SizedBox(height: 20),
+    _settingsTile('Appearance', 'Use the top-bar control to switch between light and dark themes.', Icons.dark_mode_outlined),
+    _settingsTile('Notifications', 'Native scheduled reminders are available on Android. Web reminders stay in-app.', Icons.notifications_outlined),
+    _settingsTile('Backend URL', ApiService.baseUrl, Icons.cloud_outlined),
+  ]);
+
+  Widget _settingsTile(String title, String subtitle, IconData icon) => Card(child: ListTile(contentPadding: const EdgeInsets.all(18), leading: Icon(icon, color: const Color(0xFF818CF8)), title: Text(title), subtitle: Text(subtitle)));
 
   /// Build the main task screen
   Widget _buildTaskScreen() {
@@ -474,4 +510,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+class _SearchIntent extends Intent {
+  const _SearchIntent();
 }

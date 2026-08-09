@@ -36,6 +36,34 @@ class ChecklistItem {
   }
 }
 
+class Tag {
+  final int id;
+  final String name;
+  final String color;
+
+  const Tag({required this.id, required this.name, required this.color});
+
+  factory Tag.fromJson(Map<String, dynamic> json) => Tag(
+        id: json['id'] as int,
+        name: json['name'] ?? '',
+        color: json['color'] ?? '#6366F1',
+      );
+}
+
+class Attachment {
+  final int id;
+  final String originalName;
+  final String url;
+
+  const Attachment({required this.id, required this.originalName, required this.url});
+
+  factory Attachment.fromJson(Map<String, dynamic> json) => Attachment(
+        id: json['id'] as int,
+        originalName: json['original_name'] ?? '',
+        url: json['url'] ?? json['file'] ?? '',
+      );
+}
+
 /// Task model representing a single task with enhanced features
 class Task {
   final int id;
@@ -51,6 +79,13 @@ class Task {
   final String? updatedAt;
   final int owner;
   final List<ChecklistItem> checklistItems;
+  final List<Tag> tags;
+  final List<Attachment> attachments;
+  final bool archived;
+  final String? trashedAt;
+  final int sortOrder;
+  final String recurrence;
+  final int? reminderMinutes;
 
   Task({
     required this.id,
@@ -66,6 +101,13 @@ class Task {
     this.updatedAt,
     required this.owner,
     this.checklistItems = const [],
+    this.tags = const [],
+    this.attachments = const [],
+    this.archived = false,
+    this.trashedAt,
+    this.sortOrder = 0,
+    this.recurrence = 'none',
+    this.reminderMinutes,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) {
@@ -88,6 +130,13 @@ class Task {
       updatedAt: json['updated_at'],
       owner: json['owner'] ?? 0,
       checklistItems: items,
+      tags: (json['tags'] as List<dynamic>? ?? []).map((tag) => Tag.fromJson(tag)).toList(),
+      attachments: (json['attachments'] as List<dynamic>? ?? []).map((item) => Attachment.fromJson(item)).toList(),
+      archived: json['archived'] ?? false,
+      trashedAt: json['trashed_at'],
+      sortOrder: json['sort_order'] ?? 0,
+      recurrence: json['recurrence'] ?? 'none',
+      reminderMinutes: json['reminder_minutes'],
     );
   }
 
@@ -101,6 +150,11 @@ class Task {
       'due_time': dueTime,
       'notes': notes,
       'completed': completed,
+      'tag_ids': tags.map((tag) => tag.id).toList(),
+      'archived': archived,
+      'sort_order': sortOrder,
+      'recurrence': recurrence,
+      'reminder_minutes': reminderMinutes,
     };
   }
 
@@ -132,6 +186,13 @@ class Task {
     String? updatedAt,
     int? owner,
     List<ChecklistItem>? checklistItems,
+    List<Tag>? tags,
+    List<Attachment>? attachments,
+    bool? archived,
+    String? trashedAt,
+    int? sortOrder,
+    String? recurrence,
+    int? reminderMinutes,
   }) {
     return Task(
       id: id ?? this.id,
@@ -147,6 +208,13 @@ class Task {
       updatedAt: updatedAt ?? this.updatedAt,
       owner: owner ?? this.owner,
       checklistItems: checklistItems ?? this.checklistItems,
+      tags: tags ?? this.tags,
+      attachments: attachments ?? this.attachments,
+      archived: archived ?? this.archived,
+      trashedAt: trashedAt ?? this.trashedAt,
+      sortOrder: sortOrder ?? this.sortOrder,
+      recurrence: recurrence ?? this.recurrence,
+      reminderMinutes: reminderMinutes ?? this.reminderMinutes,
     );
   }
 }

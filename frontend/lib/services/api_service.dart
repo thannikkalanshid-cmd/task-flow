@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/task_model.dart';
+import '../models/task_note_model.dart';
 import '../models/user_model.dart';
 
 /// ApiService handles all API communication with the Django backend
@@ -8,7 +9,7 @@ class ApiService {
   // Override for a physical device or deployed backend with --dart-define.
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api',
+    defaultValue: 'http://10.10.11.123:8000/api',
   );
 
   final String? token;
@@ -27,11 +28,13 @@ class ApiService {
   // ====================== Authentication Methods ======================
 
   /// Register a new user
-  Future<http.Response> register(String username, String email, String password) {
+  Future<http.Response> register(
+      String username, String email, String password) {
     return http.post(
       Uri.parse('$baseUrl/register/'),
       headers: _headers,
-      body: jsonEncode({'username': username, 'email': email, 'password': password}),
+      body: jsonEncode(
+          {'username': username, 'email': email, 'password': password}),
     );
   }
 
@@ -46,28 +49,100 @@ class ApiService {
       }),
     );
 
-    print('LOGIN STATUS: ${response.statusCode}');
-    print('LOGIN BODY: ${response.body}');
-
     return response;
+  }
+
+  /// Exchanges a persisted refresh token for a new access token.
+  Future<String?> refreshAccessToken(String refreshToken) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/token/refresh/'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'refresh': refreshToken}),
+    );
+    if (response.statusCode != 200) return null;
+    return (jsonDecode(response.body) as Map<String, dynamic>)['access']
+        as String?;
   }
 
   // ====================== User Profile Methods ======================
 
   /// Fetch the current user's profile
   Future<UserProfile> fetchProfile() async {
-    final response = await http.get(Uri.parse('$baseUrl/profile/'), headers: _headers);
+    final response =
+        await http.get(Uri.parse('$baseUrl/profile/'), headers: _headers);
     if (response.statusCode != 200) {
       throw Exception('Failed to load profile');
     }
     return UserProfile.fromJson(jsonDecode(response.body));
   }
 
+  /// Update editable fields on the current user's profile.
+  Future<UserProfile> updateProfile({
+    required String username,
+    required String email,
+    required String bio,
+  }) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl/profile/'),
+      headers: _headers,
+      body: jsonEncode({
+        'username': username,
+        'email': email,
+        'bio': bio,
+      }),
+    );
+    if (response.statusCode != 200) {
+      throw Exception(_errorMessage(response, 'Failed to update profile'));
+    }
+    return UserProfile.fromJson(jsonDecode(response.body));
+  }
+
+  /// Upload a profile image as multipart data and return its absolute URL.
+  Future<String> uploadProfileImage({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/profile/image/'),
+    );
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'profile_image',
+        bytes,
+        filename: filename,
+      ),
+    );
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    if (response.statusCode != 200) {
+      throw Exception(_errorMessage(response, 'Failed to upload image'));
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return data['profile_image_url'] as String;
+  }
+
+  String _errorMessage(http.Response response, String fallback) {
+    try {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic> && data.isNotEmpty) {
+        final value = data.values.first;
+        if (value is List && value.isNotEmpty) return value.first.toString();
+        return value.toString();
+      }
+    } catch (_) {}
+    return fallback;
+  }
+
   // ====================== Task Methods ======================
 
   /// Fetch all tasks for the current user
   Future<List<Task>> fetchTasks() async {
-    final response = await http.get(Uri.parse('$baseUrl/tasks/'), headers: _headers);
+    final response =
+        await http.get(Uri.parse('$baseUrl/tasks/'), headers: _headers);
     if (response.statusCode != 200) {
       throw Exception('Failed to load tasks');
     }
@@ -105,7 +180,8 @@ class ApiService {
   }
 
   /// Update an existing task
-  Future<Task> updateTask(int id, {
+  Future<Task> updateTask(
+    int id, {
     String? title,
     String? description,
     String? category,
@@ -114,6 +190,9 @@ class ApiService {
     String? dueTime,
     String? notes,
     bool? completed,
+    List<int>? tagIds,
+    String? recurrence,
+    int? reminderMinutes,
   }) async {
     final updateData = <String, dynamic>{};
     if (title != null) updateData['title'] = title;
@@ -124,6 +203,10 @@ class ApiService {
     if (dueTime != null) updateData['due_time'] = dueTime;
     if (notes != null) updateData['notes'] = notes;
     if (completed != null) updateData['completed'] = completed;
+    if (tagIds != null) updateData['tag_ids'] = tagIds;
+    if (recurrence != null) updateData['recurrence'] = recurrence;
+    if (reminderMinutes != null)
+      updateData['reminder_minutes'] = reminderMinutes;
 
     final response = await http.patch(
       Uri.parse('$baseUrl/tasks/$id/'),
@@ -145,6 +228,100 @@ class ApiService {
     if (response.statusCode != 204) {
       throw Exception('Failed to delete task: ${response.body}');
     }
+  }
+
+  Future<List<Tag>> fetchTags() async {
+    final response =
+        await http.get(Uri.parse('$baseUrl/tags/'), headers: _headers);
+    if (response.statusCode != 200)
+      throw Exception(_errorMessage(response, 'Failed to load tags'));
+    return (jsonDecode(response.body) as List)
+        .map((item) => Tag.fromJson(item))
+        .toList();
+  }
+
+  Future<Tag> createTag(String name, String color) async {
+    final response = await http.post(Uri.parse('$baseUrl/tags/'),
+        headers: _headers, body: jsonEncode({'name': name, 'color': color}));
+    if (response.statusCode != 201)
+      throw Exception(_errorMessage(response, 'Failed to create tag'));
+    return Tag.fromJson(jsonDecode(response.body));
+  }
+
+  Future<void> deleteTag(int id) async {
+    final response =
+        await http.delete(Uri.parse('$baseUrl/tags/$id/'), headers: _headers);
+    if (response.statusCode != 204)
+      throw Exception(_errorMessage(response, 'Failed to delete tag'));
+  }
+
+  Future<Map<String, dynamic>> fetchAnalytics() async {
+    final response = await http.get(Uri.parse('$baseUrl/tasks/analytics/'),
+        headers: _headers);
+    if (response.statusCode != 200)
+      throw Exception(_errorMessage(response, 'Failed to load analytics'));
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  Future<void> uploadAttachment(
+      {required int taskId,
+      required List<int> bytes,
+      required String filename}) async {
+    final request =
+        http.MultipartRequest('POST', Uri.parse('$baseUrl/attachments/'));
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    request.fields['task_id'] = '$taskId';
+    request.files
+        .add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode != 201)
+      throw Exception(_errorMessage(response, 'Failed to upload attachment'));
+  }
+
+  Future<void> deleteAttachment(int id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/attachments/$id/'),
+        headers: _headers);
+    if (response.statusCode != 204)
+      throw Exception(_errorMessage(response, 'Failed to delete attachment'));
+  }
+
+  // ====================== Task Note Methods ======================
+
+  Future<List<TaskNote>> getTaskNotes(int taskId) async {
+    final response = await http.get(Uri.parse('$baseUrl/tasks/$taskId/notes/'),
+        headers: _headers);
+    if (response.statusCode != 200)
+      throw Exception(_errorMessage(response, 'Failed to load notes'));
+    return (jsonDecode(response.body) as List)
+        .map((item) => TaskNote.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<TaskNote> createTaskNote(int taskId,
+      {required String title, required String content}) async {
+    final response = await http.post(Uri.parse('$baseUrl/tasks/$taskId/notes/'),
+        headers: _headers,
+        body: jsonEncode({'title': title, 'content': content}));
+    if (response.statusCode != 201)
+      throw Exception(_errorMessage(response, 'Failed to create note'));
+    return TaskNote.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  Future<TaskNote> updateTaskNote(int noteId,
+      {required String title, required String content}) async {
+    final response = await http.patch(Uri.parse('$baseUrl/notes/$noteId/'),
+        headers: _headers,
+        body: jsonEncode({'title': title, 'content': content}));
+    if (response.statusCode != 200)
+      throw Exception(_errorMessage(response, 'Failed to save note'));
+    return TaskNote.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  Future<void> deleteTaskNote(int noteId) async {
+    final response = await http.delete(Uri.parse('$baseUrl/notes/$noteId/'),
+        headers: _headers);
+    if (response.statusCode != 204)
+      throw Exception(_errorMessage(response, 'Failed to delete note'));
   }
 
   // ====================== Checklist Item Methods ======================

@@ -28,8 +28,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         final accessToken = body['access'];
+        final refreshToken = body['refresh'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('access_token', accessToken);
+        if (refreshToken is String && refreshToken.isNotEmpty) {
+          await prefs.setString('refresh_token', refreshToken);
+        }
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           _createRoute(HomeScreen(token: accessToken)),

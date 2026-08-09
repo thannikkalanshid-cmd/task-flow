@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/task_model.dart';
+import '../models/task_note_model.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
+import 'note_editor_screen.dart';
 
 /// Task detail and edit screen with support for all task fields
 class TaskDetailScreen extends StatefulWidget {
@@ -23,7 +28,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _categoryController;
-  late TextEditingController _notesController;
   late TextEditingController _checklistController;
 
   late String _selectedPriority;
@@ -31,11 +35,24 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   late String? _selectedDueTime;
   late bool _isCompleted;
   late List<ChecklistItem> _checklistItems;
+  late List<Attachment> _attachments;
+  List<TaskNote> _taskNotes = [];
+  late int? _reminderMinutes;
 
   bool _isLoading = false;
   bool _isEditing = false;
+  bool _notesLoading = true;
 
   late ApiService _apiService;
+
+  String get _reminderLabel =>
+      {
+        0: 'At due time',
+        10: '10 minutes before',
+        30: '30 minutes before',
+        60: '1 hour before',
+      }[_reminderMinutes] ??
+      'At due time';
 
   @override
   void initState() {
@@ -47,7 +64,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _descriptionController =
         TextEditingController(text: widget.task.description);
     _categoryController = TextEditingController(text: widget.task.category);
-    _notesController = TextEditingController(text: widget.task.notes);
     _checklistController = TextEditingController();
 
     // Initialize other fields
@@ -56,6 +72,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _selectedDueTime = widget.task.dueTime;
     _isCompleted = widget.task.completed;
     _checklistItems = List.from(widget.task.checklistItems);
+    _attachments = List.from(widget.task.attachments);
+    _reminderMinutes = widget.task.reminderMinutes;
+    _loadNotes();
   }
 
   @override
@@ -63,7 +82,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _categoryController.dispose();
-    _notesController.dispose();
     _checklistController.dispose();
     super.dispose();
   }
@@ -78,7 +96,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _apiService.updateTask(
+      final updated = await _apiService.updateTask(
         widget.task.id,
         title: _titleController.text,
         description: _descriptionController.text,
@@ -86,9 +104,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         priority: _selectedPriority,
         dueDate: _selectedDueDate,
         dueTime: _selectedDueTime,
-        notes: _notesController.text,
         completed: _isCompleted,
+        reminderMinutes: _reminderMinutes,
       );
+      await NotificationService.instance.schedule(updated);
 
       widget.onTaskUpdated();
       if (mounted) {
@@ -192,6 +211,140 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       _showMessage('Checklist item deleted');
     } catch (e) {
       _showMessage('Failed to delete checklist item: $e', isError: true);
+    }
+  }
+
+  Future<void> _loadNotes() async {
+    setState(() => _notesLoading = true);
+    try {
+      final notes = await _apiService.getTaskNotes(widget.task.id);
+      if (mounted) setState(() => _taskNotes = notes);
+    } catch (_) {
+      if (mounted) _showMessage('Could not load notes', isError: true);
+    } finally {
+      if (mounted) setState(() => _notesLoading = false);
+    }
+  }
+
+  Future<void> _openNoteEditor([TaskNote? note]) async {
+    final changed = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+            builder: (_) => NoteEditorScreen(
+                taskId: widget.task.id, token: widget.token, note: note)));
+    if (changed == true) {
+      await _loadNotes();
+      if (mounted)
+        _showMessage(note == null ? 'Note created' : 'Notes updated');
+    }
+  }
+
+  Widget _buildNotesSection() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        const Text('Notes',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600)),
+        TextButton.icon(
+            onPressed: _isLoading ? null : () => _openNoteEditor(),
+            icon: const Icon(Icons.add),
+            label: const Text('Add Note')),
+      ]),
+      if (_notesLoading)
+        const Center(
+            child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator()))
+      else if (_taskNotes.isEmpty)
+        Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(12)),
+            child: Column(children: [
+              const Text('No notes yet',
+                  style: TextStyle(color: Colors.white70)),
+              TextButton.icon(
+                  onPressed: () => _openNoteEditor(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add your first note')),
+            ]))
+      else
+        ..._taskNotes.map((note) => Card(
+            color: const Color(0xFF111827),
+            child: ListTile(
+              leading: const Icon(Icons.sticky_note_2_outlined,
+                  color: Color(0xFF818CF8)),
+              title: Text(note.title,
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text(note.content.isEmpty ? 'No content' : note.content,
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _openNoteEditor(note),
+            ))),
+    ]);
+  }
+
+  Future<void> _pickAndUploadAttachment() async {
+    final result = await FilePicker.pickFiles(
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: const [
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'webp',
+        'pdf',
+        'doc',
+        'docx',
+        'xls',
+        'xlsx',
+        'zip',
+        'mp4',
+        'mov',
+        'mp3',
+        'wav'
+      ],
+    );
+    final file = result?.files.single;
+    if (file == null || file.bytes == null) return;
+    setState(() => _isLoading = true);
+    try {
+      await _apiService.uploadAttachment(
+          taskId: widget.task.id, bytes: file.bytes!, filename: file.name);
+      widget.onTaskUpdated();
+      _showMessage('Attachment uploaded. Reopen this task to view it.');
+    } catch (error) {
+      _showMessage('Unable to upload attachment: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _deleteAttachment(Attachment attachment) async {
+    final confirmed = await _showConfirmDialog(
+        'Delete attachment', 'Remove ${attachment.originalName}?');
+    if (!confirmed) return;
+    try {
+      await _apiService.deleteAttachment(attachment.id);
+      setState(
+          () => _attachments.removeWhere((item) => item.id == attachment.id));
+      widget.onTaskUpdated();
+      _showMessage('Attachment deleted.');
+    } catch (error) {
+      _showMessage('Unable to delete attachment: $error', isError: true);
+    }
+  }
+
+  Future<void> _openAttachment(Attachment attachment) async {
+    final uri = Uri.tryParse(attachment.url);
+    if (uri == null ||
+        !await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+      _showMessage('Unable to open attachment.', isError: true);
     }
   }
 
@@ -304,6 +457,29 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       border: InputBorder.none,
                     ),
                     onChanged: (_) => setState(() => _isEditing = true),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildDropdown(
+                    label: 'Reminder',
+                    value: _reminderLabel,
+                    onChanged: (value) {
+                      setState(() {
+                        _reminderMinutes = {
+                          'At due time': 0,
+                          '10 minutes before': 10,
+                          '30 minutes before': 30,
+                          '1 hour before': 60
+                        }[value];
+                        _isEditing = true;
+                      });
+                    },
+                    items: const [
+                      'At due time',
+                      '10 minutes before',
+                      '30 minutes before',
+                      '1 hour before'
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -485,31 +661,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Notes
-                  const Text(
-                    'Notes',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _notesController,
-                    maxLines: 3,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Add notes, questions, or reminders',
-                      filled: true,
-                      fillColor: const Color(0xFF111827),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    onChanged: (_) => setState(() => _isEditing = true),
-                  ),
+                  // Independent notes are intentionally separate from the legacy Task.notes field.
+                  _buildNotesSection(),
                   const SizedBox(height: 24),
 
                   // Checklist section
@@ -596,6 +749,47 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Attachments',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600)),
+                      TextButton.icon(
+                          onPressed:
+                              _isLoading ? null : _pickAndUploadAttachment,
+                          icon: const Icon(Icons.attach_file),
+                          label: const Text('Upload')),
+                    ],
+                  ),
+                  if (_attachments.isEmpty)
+                    const Padding(
+                        padding: EdgeInsets.only(bottom: 12),
+                        child: Text('No attachments yet.',
+                            style: TextStyle(color: Colors.white54)))
+                  else
+                    ..._attachments.map((attachment) => Card(
+                          color: const Color(0xFF111827),
+                          child: ListTile(
+                            leading: Icon(attachment.originalName
+                                    .toLowerCase()
+                                    .endsWith('.pdf')
+                                ? Icons.picture_as_pdf_outlined
+                                : Icons.insert_drive_file_outlined),
+                            title: Text(attachment.originalName,
+                                overflow: TextOverflow.ellipsis),
+                            onTap: () => _openAttachment(attachment),
+                            trailing: IconButton(
+                                tooltip: 'Delete attachment',
+                                onPressed: () => _deleteAttachment(attachment),
+                                icon: const Icon(Icons.delete_outline,
+                                    color: Colors.redAccent)),
+                          ),
+                        )),
+                  const SizedBox(height: 12),
 
                   // Save button
                   if (_isEditing)
