@@ -25,7 +25,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final dayCount = DateTime(_month.year, _month.month + 1, 0).day;
     final leading = first.weekday % 7;
     return Container(
-      color: const Color(0xFF08122A),
+      color: const Color(0xFF070B1E),
       child: ListView(padding: const EdgeInsets.all(16), children: [
         Row(children: [IconButton(onPressed: () => setState(() => _month = DateTime(_month.year, _month.month - 1)), icon: const Icon(Icons.chevron_left, color: Colors.white)), Expanded(child: Text('${_month.month}/${_month.year}', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))), IconButton(onPressed: () => setState(() => _month = DateTime(_month.year, _month.month + 1)), icon: const Icon(Icons.chevron_right, color: Colors.white))]),
         const SizedBox(height: 12),

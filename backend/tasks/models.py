@@ -83,6 +83,8 @@ class Tag(models.Model):
 
 class Attachment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='attachments')
+    # Optional: set when the file belongs to a specific note instead of the task itself.
+    note = models.ForeignKey(TaskNote, null=True, blank=True, on_delete=models.CASCADE, related_name='attachments')
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='task_attachments')
     file = models.FileField(upload_to='task_attachments/%Y/%m/')
     original_name = models.CharField(max_length=255)

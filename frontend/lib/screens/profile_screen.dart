@@ -150,7 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF08122A), Color(0xFF0F172A)],
+          colors: [Color(0xFF070B1E), Color(0xFF0A1230)],
         ),
       ),
       child: SafeArea(
@@ -172,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF111827),
+                        color: const Color(0xFF111B3A),
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(color: Colors.white12),
                       ),
@@ -302,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111827),
+        color: const Color(0xFF111B3A),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white12),
       ),

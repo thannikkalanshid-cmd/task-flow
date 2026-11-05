@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Admin{% endblock %} · TaskFlow Admin</title>
+{% include "adminpanel/_theme.html" %}
+</head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">TaskFlow <span>Admin</span></div>
+    <nav>
+      <a href="{% url 'adminpanel:dashboard' %}" class="{% if request.path == '/admin_panel/' %}active{% endif %}">Dashboard</a>
+      <a href="{% url 'adminpanel:user_list' %}" class="{% if '/admin_panel/users' in request.path %}active{% endif %}">Users</a>
+      <a href="{% url 'adminpanel:task_list' %}" class="{% if '/admin_panel/tasks' in request.path or '/admin_panel/notes' in request.path %}active{% endif %}">Tasks &amp; notes</a>
+      <a href="{% url 'adminpanel:attachment_list' %}" class="{% if '/admin_panel/attachments' in request.path %}active{% endif %}">Attachments</a>
+    </nav>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <span>Signed in as <b>{{ user.username }}</b>{% if user.is_superuser %} <span class="badge blue">superuser</span>{% endif %}</span>
+      <form method="post" action="{% url 'adminpanel:logout' %}" class="inline">{% csrf_token %}<button class="btn btn-ghost btn-sm">Sign out</button></form>
+    </div>
+    <div class="content">
+      {% for m in messages %}<div class="flash {{ m.tags }}">{{ m }}</div>{% endfor %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('submit', function (e) {
+  var msg = e.target.getAttribute('data-confirm');
+  if (msg && !window.confirm(msg)) e.preventDefault();
+});
+</script>
+</body>
+</html>

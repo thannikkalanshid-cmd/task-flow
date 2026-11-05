@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/task_model.dart';
 import '../models/task_note_model.dart';
@@ -7,10 +8,12 @@ import '../models/user_model.dart';
 /// ApiService handles all API communication with the Django backend
 class ApiService {
   // Override for a physical device or deployed backend with --dart-define.
-  static const baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.10.11.123:8000/api',
-  );
+  static const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static final baseUrl = _configuredBaseUrl.isNotEmpty
+      ? _configuredBaseUrl
+      : kIsWeb
+          ? 'http://127.0.0.1:8000/api'
+          : 'http://10.0.2.2:8000/api';
 
   final String? token;
 
@@ -35,6 +38,22 @@ class ApiService {
       headers: _headers,
       body: jsonEncode(
           {'username': username, 'email': email, 'password': password}),
+    );
+  }
+
+  Future<http.Response> verifyEmail(String email, String otp) {
+    return http.post(
+      Uri.parse('$baseUrl/verify-email/'),
+      headers: _headers,
+      body: jsonEncode({'email': email, 'otp': otp}),
+    );
+  }
+
+  Future<http.Response> resendVerification(String email) {
+    return http.post(
+      Uri.parse('$baseUrl/resend-verification/'),
+      headers: _headers,
+      body: jsonEncode({'email': email}),
     );
   }
 
@@ -263,19 +282,24 @@ class ApiService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-  Future<void> uploadAttachment(
+  /// Uploads a file to a task, or to one of its notes when [noteId] is given.
+  Future<Attachment> uploadAttachment(
       {required int taskId,
+      int? noteId,
       required List<int> bytes,
       required String filename}) async {
     final request =
         http.MultipartRequest('POST', Uri.parse('$baseUrl/attachments/'));
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
     request.fields['task_id'] = '$taskId';
+    if (noteId != null) request.fields['note_id'] = '$noteId';
     request.files
         .add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
     final response = await http.Response.fromStream(await request.send());
     if (response.statusCode != 201)
       throw Exception(_errorMessage(response, 'Failed to upload attachment'));
+    return Attachment.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>);
   }
 
   Future<void> deleteAttachment(int id) async {

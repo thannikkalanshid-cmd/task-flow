@@ -83,7 +83,7 @@ class TaskItem extends StatelessWidget {
                   colors: [Color(0xFF0F766E), Color(0xFF047857)],
                 )
               : const LinearGradient(
-                  colors: [Color(0xFF111827), Color(0xFF1E293B)],
+                  colors: [Color(0xFF111B3A), Color(0xFF1E293B)],
                 ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [

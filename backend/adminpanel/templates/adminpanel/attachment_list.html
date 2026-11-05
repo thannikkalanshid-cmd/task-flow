@@ -1,0 +1,19 @@
+{% extends "adminpanel/base.html" %}
+{% block title %}Attachments{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Attachments</h1></div>
+<form class="toolbar" method="get">
+  <input name="q" value="{{ q }}" placeholder="Search file, task, uploader or owner">
+  <select name="kind">
+    <option value="">All files</option>
+    <option value="task"{% if kind == 'task' %} selected{% endif %}>Task files</option>
+    <option value="note"{% if kind == 'note' %} selected{% endif %}>Note files</option>
+  </select>
+  <button class="btn">Filter</button>
+  {% if q or kind %}<a class="btn btn-ghost" href="{% url 'adminpanel:attachment_list' %}">Clear</a>{% endif %}
+</form>
+<div class="card">
+  {% include "adminpanel/_attachment_table.html" with attachments=page.object_list %}
+  {% include "adminpanel/_pager.html" %}
+</div>
+{% endblock %}

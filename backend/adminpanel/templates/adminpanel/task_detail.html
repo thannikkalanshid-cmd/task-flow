@@ -1,0 +1,107 @@
+{% extends "adminpanel/base.html" %}
+{% block title %}{{ task.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ task.title|truncatechars:60 }}
+    {% if task.trashed_at %}<span class="badge red">trashed</span>{% endif %}
+    {% if task.archived %}<span class="badge amber">archived</span>{% endif %}
+    {% if task.completed %}<span class="badge green">done</span>{% else %}<span class="badge">pending</span>{% endif %}
+  </h1>
+  <div class="row-actions">
+    {% if task.completed %}{% url 'adminpanel:task_action' task.pk 'reopen' as u %}{% include "adminpanel/_post_button.html" with url=u label="Reopen" cls="btn-ghost" %}
+    {% else %}{% url 'adminpanel:task_action' task.pk 'complete' as u %}{% include "adminpanel/_post_button.html" with url=u label="Mark done" cls="btn-ok" %}{% endif %}
+    {% if task.archived %}{% url 'adminpanel:task_action' task.pk 'unarchive' as u %}{% include "adminpanel/_post_button.html" with url=u label="Unarchive" cls="btn-ghost" %}
+    {% else %}{% url 'adminpanel:task_action' task.pk 'archive' as u %}{% include "adminpanel/_post_button.html" with url=u label="Archive" cls="btn-ghost" %}{% endif %}
+    {% if task.trashed_at %}{% url 'adminpanel:task_action' task.pk 'restore' as u %}{% include "adminpanel/_post_button.html" with url=u label="Restore from trash" cls="btn-ok" %}
+    {% else %}{% url 'adminpanel:task_action' task.pk 'trash' as u %}{% include "adminpanel/_post_button.html" with url=u label="Move to trash" cls="btn-warn" confirm="Move this task to the trash? The owner can restore it." %}{% endif %}
+    {% url 'adminpanel:task_delete' task.pk as u %}{% include "adminpanel/_post_button.html" with url=u label="Delete permanently" cls="btn-danger" confirm="Permanently delete this task with its notes and files? This cannot be undone." %}
+  </div>
+</div>
+<p class="muted">Owner: <a href="{% url 'adminpanel:user_detail' task.owner_id %}">{{ task.owner.username }}</a> · created {{ task.created_at|date:"d M Y, H:i" }} · updated {{ task.updated_at|date:"d M Y, H:i" }}</p>
+
+<div class="two">
+<div>
+  <div class="card"><h2>Task details</h2>
+    <form method="post">{% csrf_token %}
+      {% include "adminpanel/_form_fields.html" %}
+      <button class="btn">Save task</button>
+    </form>
+  </div>
+
+  <div class="card"><h2>Checklist</h2>
+    <div class="table-wrap"><table><tbody>
+    {% for item in checklist %}
+      <tr><td{% if item.completed %} class="muted" style="text-decoration:line-through"{% endif %}>{{ item.title }}</td>
+      <td class="actions">
+        {% url 'adminpanel:checklist_toggle' item.pk as u %}{% include "adminpanel/_post_button.html" with url=u label=item.completed|yesno:"Undo,Done" cls="btn-ghost" %}
+        {% url 'adminpanel:checklist_delete' item.pk as u %}{% include "adminpanel/_post_button.html" with url=u label="Delete" cls="btn-danger" confirm="Delete this checklist item?" %}
+      </td></tr>
+    {% empty %}<tr><td class="muted">No checklist items.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <form method="post" action="{% url 'adminpanel:checklist_add' task.pk %}" class="toolbar" style="margin:12px 0 0">{% csrf_token %}
+      <input name="title" placeholder="New checklist item" required style="flex:1"><button class="btn btn-sm">Add</button>
+    </form>
+  </div>
+
+  <div class="card"><h2>Shared with</h2>
+    <div class="table-wrap"><table><tbody>
+    {% for m in members %}
+      <tr><td><a href="{% url 'adminpanel:user_detail' m.user_id %}">{{ m.user.username }}</a> <span class="badge">{{ m.role }}</span></td>
+      <td class="actions">{% url 'adminpanel:member_delete' m.pk as u %}{% include "adminpanel/_post_button.html" with url=u label="Remove" cls="btn-danger" confirm="Remove this member from the task?" %}</td></tr>
+    {% empty %}<tr><td class="muted">Not shared with anyone.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <form method="post" action="{% url 'adminpanel:member_add' task.pk %}" class="toolbar" style="margin:12px 0 0">{% csrf_token %}
+      <input name="username" placeholder="Username to share with" required style="flex:1"><button class="btn btn-sm">Add member</button>
+    </form>
+  </div>
+</div>
+
+<div>
+  <div class="card"><h2>Notes ({{ notes|length }})</h2>
+    {% for n in notes %}
+      <div style="padding:8px 0;border-bottom:1px solid var(--line)">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <b>{{ n.title }}</b>
+          <span class="row-actions">
+            {% if n.file_count %}<span class="badge">📎 {{ n.file_count }}</span>{% endif %}
+            <a class="btn btn-ghost btn-sm" href="{% url 'adminpanel:note_edit' n.pk %}">Edit</a>
+            {% url 'adminpanel:note_delete' n.pk as u %}{% include "adminpanel/_post_button.html" with url=u label="Delete" cls="btn-danger" confirm="Delete this note and its attachments?" %}
+          </span>
+        </div>
+        <pre class="note">{{ n.content|truncatechars:240 }}</pre>
+      </div>
+    {% empty %}<p class="muted">No notes.</p>{% endfor %}
+    <details style="margin-top:12px"><summary>Add a note</summary>
+      <form method="post" action="{% url 'adminpanel:note_add' task.pk %}">{% csrf_token %}
+        <div class="field"><input name="title" placeholder="Title" required maxlength="200"></div>
+        <div class="field"><textarea name="content" rows="4" placeholder="Content" required></textarea></div>
+        <button class="btn btn-sm">Add note</button>
+      </form>
+    </details>
+  </div>
+
+  <div class="card"><h2>Attachments ({{ files|length }})</h2>
+    {% include "adminpanel/_attachment_table.html" with attachments=files %}
+    <form method="post" action="{% url 'adminpanel:attachment_upload' task.pk %}" enctype="multipart/form-data" style="margin-top:14px">{% csrf_token %}
+      <div class="field"><label>Upload a file</label><input type="file" name="file" required></div>
+      <div class="field"><label>Attach to</label>{{ upload_form.note }}</div>
+      <button class="btn btn-sm">Upload</button>
+    </form>
+  </div>
+
+  <div class="card"><h2>Comments ({{ comments|length }})</h2>
+    <div class="table-wrap"><table><tbody>
+    {% for c in comments %}
+      <tr><td><b>{{ c.author.username }}</b> <span class="muted">{{ c.created_at|date:"d M Y, H:i" }}</span><pre class="note">{{ c.body }}</pre></td>
+      <td class="actions">{% url 'adminpanel:comment_delete' c.pk as u %}{% include "adminpanel/_post_button.html" with url=u label="Delete" cls="btn-danger" confirm="Delete this comment?" %}</td></tr>
+    {% empty %}<tr><td class="muted">No comments.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+
+  <div class="card"><h2>Recent activity</h2>
+    {% for a in activities %}<div class="muted">{{ a.created_at|date:"d M, H:i" }} · {{ a.actor.username|default:"(deleted user)" }} {{ a.action }}</div>
+    {% empty %}<div class="muted">No activity yet.</div>{% endfor %}
+  </div>
+</div>
+</div>
+{% endblock %}

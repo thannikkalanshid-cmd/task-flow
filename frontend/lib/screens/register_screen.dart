@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'verify_email_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,24 +14,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isSubmitting = false;
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   /// Handle user registration
   Future<void> _register() async {
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (username.length < 3) {
+      _showError('Username must be at least 3 characters.');
+      return;
+    }
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+      _showError('Enter a valid email address.');
+      return;
+    }
+    if (password.length < 8) {
+      _showError('Password must be at least 8 characters.');
+      return;
+    }
+    if (password != _confirmPasswordController.text) {
+      _showError('Passwords do not match.');
+      return;
+    }
     setState(() => _isSubmitting = true);
     try {
       final response = await ApiService().register(
-        _usernameController.text.trim(),
-        _emailController.text.trim(),
-        _passwordController.text,
+        username,
+        email,
+        password,
       );
 
       if (response.statusCode == 201) {
         if (!mounted) return;
-        Navigator.of(context).pop();
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => VerifyEmailScreen(email: email)),
+        );
       } else {
         final json = jsonDecode(response.body);
-        final message = json['email']?.join(' ') ??
+        final message = json['detail'] ?? json['email']?.join(' ') ??
             json['username']?.join(' ') ??
             'Registration failed';
         _showError(message);
@@ -63,7 +97,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF0B1228), Color(0xFF111827)],
+                colors: [Color(0xFF070B1E), Color(0xFF111B3A)],
               ),
             ),
           ),
@@ -100,7 +134,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       vertical: 28.0,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF111827).withOpacity(0.92),
+                      color: const Color(0xFF111B3A).withOpacity(0.92),
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
@@ -147,7 +181,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           controller: _passwordController,
                           label: 'Password',
                           icon: Icons.lock_outline,
-                          obscureText: true,
+                          obscureText: !_passwordVisible,
+                          onToggleVisibility: () => setState(() => _passwordVisible = !_passwordVisible),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _confirmPasswordController,
+                          label: 'Confirm password',
+                          icon: Icons.lock_outline,
+                          obscureText: !_confirmPasswordVisible,
+                          onToggleVisibility: () => setState(() => _confirmPasswordVisible = !_confirmPasswordVisible),
                         ),
                         const SizedBox(height: 24),
                         SizedBox(
@@ -192,6 +235,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required IconData icon,
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
+    VoidCallback? onToggleVisibility,
   }) {
     return TextField(
       controller: controller,
@@ -202,6 +246,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         prefixIcon: Icon(icon, color: Colors.white70),
         labelText: label,
         labelStyle: const TextStyle(color: Colors.white70),
+        suffixIcon: onToggleVisibility == null
+            ? null
+            : IconButton(
+                onPressed: onToggleVisibility,
+                icon: Icon(obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: Colors.white70),
+              ),
       ),
     );
   }

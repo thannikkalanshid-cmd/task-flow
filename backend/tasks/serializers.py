@@ -11,10 +11,25 @@ class ChecklistItemSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created_at', 'updated_at')
 
 
+class AttachmentSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Attachment
+        fields = ('id', 'original_name', 'file', 'url', 'note', 'created_at', 'uploaded_by')
+        read_only_fields = ('id', 'url', 'note', 'created_at', 'uploaded_by', 'original_name')
+
+    def get_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.file.url) if request else obj.file.url
+
+
 class TaskNoteSerializer(serializers.ModelSerializer):
+    attachments = AttachmentSerializer(many=True, read_only=True)
+
     class Meta:
         model = TaskNote
-        fields = ('id', 'task', 'title', 'content', 'created_at', 'updated_at')
+        fields = ('id', 'task', 'title', 'content', 'attachments', 'created_at', 'updated_at')
         read_only_fields = ('id', 'task', 'created_at', 'updated_at')
 
 
@@ -23,19 +38,6 @@ class TagSerializer(serializers.ModelSerializer):
         model = Tag
         fields = ('id', 'name', 'color', 'created_at')
         read_only_fields = ('id', 'created_at')
-
-
-class AttachmentSerializer(serializers.ModelSerializer):
-    url = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Attachment
-        fields = ('id', 'original_name', 'file', 'url', 'created_at', 'uploaded_by')
-        read_only_fields = ('id', 'url', 'created_at', 'uploaded_by')
-
-    def get_url(self, obj):
-        request = self.context.get('request')
-        return request.build_absolute_uri(obj.file.url) if request else obj.file.url
 
 
 class TaskMemberSerializer(serializers.ModelSerializer):
@@ -70,7 +72,7 @@ class TaskSerializer(serializers.ModelSerializer):
     checklist_items = ChecklistItemSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     tag_ids = serializers.PrimaryKeyRelatedField(source='tags', many=True, queryset=Tag.objects.all(), write_only=True, required=False)
-    attachments = AttachmentSerializer(many=True, read_only=True)
+    attachments = serializers.SerializerMethodField()
     members = TaskMemberSerializer(source='memberships', many=True, read_only=True)
 
     class Meta:
@@ -80,6 +82,11 @@ class TaskSerializer(serializers.ModelSerializer):
                   'reminder_minutes', 'created_at', 'updated_at', 'owner', 'checklist_items',
                   'tags', 'tag_ids', 'attachments', 'members')
         read_only_fields = ('id', 'created_at', 'updated_at', 'owner')
+
+    def get_attachments(self, obj):
+        # Task-level files only; files attached to a note are returned with that note.
+        items = obj.attachments.filter(note__isnull=True)
+        return AttachmentSerializer(items, many=True, context=self.context).data
 
     def validate_tag_ids(self, tags):
         user = self.context['request'].user

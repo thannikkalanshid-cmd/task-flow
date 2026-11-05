@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/depth.dart';
 import 'package:flutter/services.dart';
 import '../components/task_item.dart';
 import '../models/task_model.dart';
@@ -204,14 +206,14 @@ class _HomeScreenState extends State<HomeScreen> {
     body: content,
     bottomNavigationBar: BottomNavigationBar(
       currentIndex: _selectedIndex > 4 ? 4 : _selectedIndex,
-      selectedItemColor: const Color(0xFF22C55E), unselectedItemColor: Colors.white70, backgroundColor: const Color(0xFF111827),
+      selectedItemColor: const Color(0xFF22C55E), unselectedItemColor: Colors.white70, backgroundColor: const Color(0xFF111B3A),
       onTap: (index) => setState(() => _selectedIndex = index),
       items: const [BottomNavigationBarItem(icon: Icon(Icons.task_alt), label: 'Tasks'), BottomNavigationBarItem(icon: Icon(Icons.calendar_month_outlined), label: 'Calendar'), BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'), BottomNavigationBarItem(icon: Icon(Icons.insights_outlined), label: 'Analytics'), BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile')],
     ),
   );
 
   Widget _buildSidebar() => Container(
-    width: 248, color: const Color(0xFF0B1228), padding: const EdgeInsets.fromLTRB(16, 28, 16, 20),
+    width: 248, color: const Color(0xFF070B1E), padding: const EdgeInsets.fromLTRB(16, 28, 16, 20),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('TaskFlow', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900))),
       const SizedBox(height: 32),
@@ -228,10 +230,10 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
   }
 
-  Widget _buildTopBar() => Container(height: 76, padding: const EdgeInsets.symmetric(horizontal: 28), decoration: const BoxDecoration(color: Color(0xFF111827), border: Border(bottom: BorderSide(color: Colors.white12))), child: Row(children: [Expanded(child: TextButton.icon(onPressed: () => setState(() => _selectedIndex = 2), icon: const Icon(Icons.search), label: const Text('Search tasks (Ctrl K)'))), IconButton(tooltip: 'Refresh', onPressed: _loadTasks, icon: const Icon(Icons.refresh)), IconButton(tooltip: 'Notifications', onPressed: () => _showMessage('Task reminders are kept in sync.'), icon: const Icon(Icons.notifications_none)), IconButton(tooltip: 'Toggle theme', onPressed: widget.themeController == null ? null : widget.themeController!.toggle, icon: const Icon(Icons.dark_mode_outlined)), const CircleAvatar(child: Icon(Icons.person_outline))])); /*
-    height: 76, padding: const EdgeInsets.symmetric(horizontal: 28), decoration: const BoxDecoration(color: Color(0xFF111827), border: Border(bottom: BorderSide(color: Colors.white12))),
+  Widget _buildTopBar() => Container(height: 76, padding: const EdgeInsets.symmetric(horizontal: 28), decoration: const BoxDecoration(color: Color(0xFF111B3A), border: Border(bottom: BorderSide(color: Colors.white12))), child: Row(children: [Expanded(child: TextButton.icon(onPressed: () => setState(() => _selectedIndex = 2), icon: const Icon(Icons.search), label: const Text('Search tasks (Ctrl K)'))), IconButton(tooltip: 'Refresh', onPressed: _loadTasks, icon: const Icon(Icons.refresh)), IconButton(tooltip: 'Notifications', onPressed: () => _showMessage('Task reminders are kept in sync.'), icon: const Icon(Icons.notifications_none)), IconButton(tooltip: 'Toggle theme', onPressed: widget.themeController == null ? null : widget.themeController!.toggle, icon: const Icon(Icons.dark_mode_outlined)), const CircleAvatar(child: Icon(Icons.person_outline))])); /*
+    height: 76, padding: const EdgeInsets.symmetric(horizontal: 28), decoration: const BoxDecoration(color: Color(0xFF111B3A), border: Border(bottom: BorderSide(color: Colors.white12))),
     child: Row(children: [
-      Expanded(child: InkWell(onTap: () => setState(() => _selectedIndex = 2), borderRadius: BorderRadius.circular(12), child: Container(height: 42, constraints: const BoxConstraints(maxWidth: 440), padding: const EdgeInsets.symmetric(horizontal: 14), decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(12)), child: const Row(children: [Icon(Icons.search, color: Colors.white54), SizedBox(width: 10), Text('Search tasks…', style: TextStyle(color: Colors.white54)), Spacer(), Text('Ctrl K', style: TextStyle(color: Colors.white38, fontSize: 12))]))),
+      Expanded(child: InkWell(onTap: () => setState(() => _selectedIndex = 2), borderRadius: BorderRadius.circular(12), child: Container(height: 42, constraints: const BoxConstraints(maxWidth: 440), padding: const EdgeInsets.symmetric(horizontal: 14), decoration: BoxDecoration(color: const Color(0xFF0A1230), borderRadius: BorderRadius.circular(12)), child: const Row(children: [Icon(Icons.search, color: Colors.white54), SizedBox(width: 10), Text('Search tasks…', style: TextStyle(color: Colors.white54)), Spacer(), Text('Ctrl K', style: TextStyle(color: Colors.white38, fontSize: 12))]))),
       IconButton(tooltip: 'Refresh', onPressed: _loadTasks, icon: const Icon(Icons.refresh)), IconButton(tooltip: 'Notifications', onPressed: () => _showMessage('Task reminders are kept in sync.'), icon: const Icon(Icons.notifications_none)),
       IconButton(tooltip: 'Toggle theme', onPressed: widget.themeController == null ? null : widget.themeController!.toggle, icon: const Icon(Icons.dark_mode_outlined)), const SizedBox(width: 8), const CircleAvatar(child: Icon(Icons.person_outline)),
     ]),
@@ -256,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF08122A), Color(0xFF0F172A)],
+          colors: [Color(0xFF070B1E), Color(0xFF0A1230)],
         ),
       ),
       child: Padding(
@@ -269,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(20.0),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF111827),
+                  color: const Color(0xFF111B3A),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.white12),
                 ),
@@ -310,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF111827),
+                  color: const Color(0xFF111B3A),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.white12),
                 ),
@@ -345,21 +347,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
+                    DepthButton(
+                        label: 'Add task',
+                        icon: Icons.add_circle_outline,
                         onPressed: _isBusy ? null : _addTask,
-                        icon: const Icon(Icons.add_circle_outline),
-                        label: const Text(
-                          'Add Task',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -444,12 +436,18 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Build a stat card for dashboard
   Widget _buildStatCard(String label, String value) {
     return Expanded(
-      child: Container(
+      child: TiltOnTouch(
+       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF0F172A),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.surfaceHi, AppColors.surface],
+          ),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white12),
+          border: Border.all(color: Colors.white.withOpacity(.10)),
+          boxShadow: AppShadows.lift,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -473,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 
@@ -486,7 +484,7 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       style: ElevatedButton.styleFrom(
         backgroundColor:
-            isSelected ? const Color(0xFF6366F1) : const Color(0xFF111827),
+            isSelected ? const Color(0xFF6366F1) : const Color(0xFF111B3A),
         foregroundColor: Colors.white,
         // The app theme uses Size.fromHeight(52), whose width is infinite.
         // Filter buttons live in a horizontally scrolling Row, so they must

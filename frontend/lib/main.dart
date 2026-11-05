@@ -5,6 +5,7 @@ import 'screens/home_screen.dart';
 import 'services/notification_service.dart';
 import 'services/theme_controller.dart';
 import 'services/api_service.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,82 +37,9 @@ class MobileApp extends StatelessWidget {
           title: "TaskFlow",
           debugShowCheckedModeBanner: false,
 
-          theme: ThemeData(
-            brightness: Brightness.dark,
+          theme: AppTheme.dark(),
 
-            primaryColor: const Color(0xFF6366F1),
-
-            scaffoldBackgroundColor: const Color(0xFF08122A),
-
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF6366F1),
-              secondary: Color(0xFF22C55E),
-              surface: Color(0xFF111827),
-            ),
-
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF111827),
-              elevation: 0,
-              centerTitle: false,
-            ),
-
-            inputDecorationTheme: InputDecorationTheme(
-              filled: true,
-              fillColor: const Color(0xFF0F172A),
-
-              hintStyle: const TextStyle(
-                color: Color(0xFF94A3B8),
-              ),
-
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(
-                  color: Color(0xFF6366F1),
-                ),
-              ),
-            ),
-
-            elevatedButtonTheme: ElevatedButtonThemeData(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6366F1),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(52),
-
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-
-          darkTheme: ThemeData(
-            brightness: Brightness.dark,
-
-            primaryColor: const Color(0xFF6366F1),
-
-            scaffoldBackgroundColor: const Color(0xFF08122A),
-
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF6366F1),
-              secondary: Color(0xFF22C55E),
-              surface: Color(0xFF111827),
-            ),
-
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF111827),
-              elevation: 0,
-            ),
-          ),
+          darkTheme: AppTheme.dark(),
 
           themeMode: themeController.mode,
 
@@ -195,8 +123,8 @@ class _StartupScreenState extends State<_StartupScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0B1228),
-              Color(0xFF111827),
+              Color(0xFF070B1E),
+              Color(0xFF111B3A),
             ],
           ),
         ),

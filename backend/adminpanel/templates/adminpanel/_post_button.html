@@ -1,0 +1,1 @@
+<form method="post" action="{{ url }}" class="inline"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>{% csrf_token %}{% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}<button class="btn btn-sm {{ cls }}">{{ label }}</button></form>

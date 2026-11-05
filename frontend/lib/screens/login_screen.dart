@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../widgets/depth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
@@ -16,6 +17,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _passwordVisible = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   /// Handle user login
   Future<void> _login() async {
@@ -64,34 +73,15 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF0B1228), Color(0xFF111827)],
-              ),
-            ),
-          ),
+          const Positioned.fill(child: AppBackdrop()),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
                 child: Column(
                   children: [
-                    Container(
+                    DepthCard(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF111827).withOpacity(0.92),
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.35),
-                            blurRadius: 30,
-                            offset: const Offset(0, 16),
-                          ),
-                        ],
-                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -123,31 +113,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: _passwordController,
                             label: 'Password',
                             icon: Icons.lock_outline,
-                            obscureText: true,
+                            obscureText: !_passwordVisible,
+                            onToggleVisibility: () => setState(() => _passwordVisible = !_passwordVisible),
                           ),
                           const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _login,
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2.5,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Log In',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                            ),
+                          DepthButton(
+                            label: 'Log in',
+                            loading: _isLoading,
+                            onPressed: _isLoading ? null : _login,
                           ),
                         ],
                       ),
@@ -183,6 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required IconData icon,
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
+    VoidCallback? onToggleVisibility,
   }) {
     return TextField(
       controller: controller,
@@ -193,6 +167,12 @@ class _LoginScreenState extends State<LoginScreen> {
         prefixIcon: Icon(icon, color: Colors.white70),
         labelText: label,
         labelStyle: const TextStyle(color: Colors.white70),
+        suffixIcon: onToggleVisibility == null
+            ? null
+            : IconButton(
+                onPressed: onToggleVisibility,
+                icon: Icon(obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: Colors.white70),
+              ),
       ),
     );
   }

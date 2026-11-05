@@ -38,7 +38,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }).toList();
 
     return Container(
-      color: const Color(0xFF08122A),
+      color: const Color(0xFF070B1E),
       child: Column(
         children: [
           Padding(

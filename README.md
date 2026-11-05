@@ -25,6 +25,14 @@ This workspace contains a full-stack project with:
    python backend/manage.py runserver 0.0.0.0:8000
    ```
 
+### Email verification
+
+New accounts receive a six-digit verification code and cannot log in until it
+is verified. For local testing, the code is printed in the Django terminal.
+For real email delivery, add the `DJANGO_EMAIL_*` values shown in
+`backend/.env.example` to `backend/.env`. With Gmail, use a Google App Password
+(not your normal Google password) as `DJANGO_EMAIL_HOST_PASSWORD`.
+
 ## Frontend
 1. Install Flutter SDK.
 2. From the `frontend` directory:

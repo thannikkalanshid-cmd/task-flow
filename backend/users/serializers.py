@@ -10,14 +10,43 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'password', 'bio')
-        extra_kwargs = {'bio': {'required': False}}
+        extra_kwargs = {
+            'bio': {'required': False},
+            'email': {'required': True},
+        }
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError('An account with this email already exists.')
+        return email
+
+    def validate_username(self, value):
+        username = value.strip()
+        if User.objects.filter(username__iexact=username).exists():
+            raise serializers.ValidationError('This username is already taken.')
+        return username
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        user = User(**validated_data)
+        user = User(**validated_data, is_active=False, email_verified=False)
         user.set_password(password)
         user.save()
         return user
+
+
+class EmailOtpSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(min_length=6, max_length=6)
+
+    def validate_otp(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError('Enter the 6-digit code from your email.')
+        return value
+
+
+class ResendEmailOtpSerializer(serializers.Serializer):
+    email = serializers.EmailField()
 
 
 class UserSerializer(serializers.ModelSerializer):

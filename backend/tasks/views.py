@@ -49,14 +49,14 @@ class TaskViewSet(viewsets.ModelViewSet):
     def notes(self, request, pk=None):
         task = self.get_object()
         if request.method == 'GET':
-            return Response(TaskNoteSerializer(task.task_notes.all(), many=True).data)
+            return Response(TaskNoteSerializer(task.task_notes.all(), many=True, context={'request': request}).data)
         if not self._can_edit(task):
             raise PermissionDenied('Cannot add notes to this task.')
-        serializer = TaskNoteSerializer(data=request.data)
+        serializer = TaskNoteSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         note = serializer.save(task=task)
         TaskActivity.objects.create(task=task, actor=request.user, action='added a note')
-        return Response(TaskNoteSerializer(note).data, status=status.HTTP_201_CREATED)
+        return Response(TaskNoteSerializer(note, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['get'])
     def analytics(self, request):
@@ -223,4 +223,9 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         if not task: raise PermissionDenied('Cannot attach files to this task.')
         file = self.request.FILES.get('file')
         if not file: raise PermissionDenied('A file is required.')
-        serializer.save(task=task, uploaded_by=self.request.user, original_name=file.name)
+        note = None
+        note_id = self.request.data.get('note_id')
+        if note_id:
+            note = TaskNote.objects.filter(pk=note_id, task=task).first()
+            if not note: raise PermissionDenied('That note does not belong to this task.')
+        serializer.save(task=task, note=note, uploaded_by=self.request.user, original_name=file.name)

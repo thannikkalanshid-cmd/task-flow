@@ -1,0 +1,50 @@
+{% extends "adminpanel/base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Users</h1><a class="btn" href="{% url 'adminpanel:user_add' %}">+ Add user</a></div>
+<form class="toolbar" method="get">
+  <input name="q" value="{{ q }}" placeholder="Search username, email or name">
+  <select name="status">
+    <option value="">All users</option>
+    <option value="active"{% if status == 'active' %} selected{% endif %}>Active</option>
+    <option value="blocked"{% if status == 'blocked' %} selected{% endif %}>Blocked</option>
+    <option value="staff"{% if status == 'staff' %} selected{% endif %}>Admins</option>
+  </select>
+  <button class="btn">Filter</button>
+  {% if q or status %}<a class="btn btn-ghost" href="{% url 'adminpanel:user_list' %}">Clear</a>{% endif %}
+</form>
+<div class="card table-wrap">
+<table>
+  <thead><tr><th>Username</th><th>Email</th><th>Status</th><th>Tasks</th><th>Joined</th><th>Last login</th><th></th></tr></thead>
+  <tbody>
+  {% for u in page %}
+  <tr>
+    <td><a href="{% url 'adminpanel:user_detail' u.pk %}">{{ u.username }}</a></td>
+    <td>{{ u.email|default:"—" }}</td>
+    <td>{% if u.is_active %}<span class="badge green">active</span>{% else %}<span class="badge red">blocked</span>{% endif %}
+        {% if u.is_superuser %}<span class="badge blue">superuser</span>{% elif u.is_staff %}<span class="badge blue">admin</span>{% endif %}</td>
+    <td><a href="{% url 'adminpanel:task_list' %}?owner={{ u.pk }}">{{ u.task_count }}</a></td>
+    <td class="muted">{{ u.date_joined|date:"d M Y" }}</td>
+    <td class="muted">{{ u.last_login|date:"d M Y, H:i"|default:"never" }}</td>
+    <td class="actions">
+      <a class="btn btn-ghost btn-sm" href="{% url 'adminpanel:user_edit' u.pk %}">Edit</a>
+      {% if u.pk != user.pk %}
+        {% url 'adminpanel:user_toggle_block' u.pk as block_url %}
+        {% if u.is_active %}
+          {% include "adminpanel/_post_button.html" with url=block_url label="Block" cls="btn-warn" confirm="Block this user? They will be signed out of the app and cannot log in." next=request.get_full_path %}
+        {% else %}
+          {% include "adminpanel/_post_button.html" with url=block_url label="Unblock" cls="btn-ok" next=request.get_full_path %}
+        {% endif %}
+        {% url 'adminpanel:user_delete' u.pk as delete_url %}
+        {% include "adminpanel/_post_button.html" with url=delete_url label="Delete" cls="btn-danger" confirm="Permanently delete this user together with ALL their tasks, notes and files? This cannot be undone." next=request.get_full_path %}
+      {% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="7" class="muted">No users match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include "adminpanel/_pager.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "adminpanel/base.html" %}
+{% block title %}{{ target.username }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ target.username }}
+    {% if target.is_active %}<span class="badge green">active</span>{% else %}<span class="badge red">blocked</span>{% endif %}
+    {% if target.is_superuser %}<span class="badge blue">superuser</span>{% elif target.is_staff %}<span class="badge blue">admin</span>{% endif %}
+  </h1>
+  <div class="row-actions">
+    {% if not locked %}
+      <a class="btn btn-ghost" href="{% url 'adminpanel:user_edit' target.pk %}">Edit</a>
+    {% endif %}
+    {% if target.pk != user.pk and not locked %}
+      {% url 'adminpanel:user_toggle_block' target.pk as block_url %}
+      {% if target.is_active %}
+        {% include "adminpanel/_post_button.html" with url=block_url label="Block user" cls="btn-warn" confirm="Block this user? They will be signed out of the app and cannot log in." %}
+      {% else %}
+        {% include "adminpanel/_post_button.html" with url=block_url label="Unblock user" cls="btn-ok" %}
+      {% endif %}
+      {% url 'adminpanel:user_delete' target.pk as del_url %}
+      {% include "adminpanel/_post_button.html" with url=del_url label="Delete user" cls="btn-danger" confirm="Permanently delete this user together with ALL their tasks, notes and files? This cannot be undone." %}
+    {% endif %}
+  </div>
+</div>
+{% if locked %}<div class="flash">This is another admin account. Only a superuser can change it.</div>{% endif %}
+<div class="two">
+  <div class="card"><h2>Profile</h2>
+    <dl class="kv">
+      <dt>Email</dt><dd>{{ target.email|default:"—" }}</dd>
+      <dt>Name</dt><dd>{{ target.get_full_name|default:"—" }}</dd>
+      <dt>Bio</dt><dd>{{ target.bio|default:"—" }}</dd>
+      <dt>Profile photo</dt><dd>{% if target.profile_image %}yes{% else %}none{% endif %}</dd>
+      <dt>Joined</dt><dd>{{ target.date_joined|date:"d M Y, H:i" }}</dd>
+      <dt>Last login</dt><dd>{{ target.last_login|date:"d M Y, H:i"|default:"never" }}</dd>
+    </dl>
+  </div>
+  <div class="card"><h2>Activity</h2>
+    <dl class="kv">
+      <dt>Own tasks</dt><dd><a href="{% url 'adminpanel:task_list' %}?owner={{ target.pk }}">{{ task_total }}</a></dd>
+      <dt>Shared with them</dt><dd>{{ shared_total }}</dd>
+      <dt>Files</dt><dd>{{ file_total }}</dd>
+    </dl>
+    <p><a class="btn btn-ghost btn-sm" href="{% url 'adminpanel:task_add' %}?owner={{ target.pk }}">+ Add task for this user</a></p>
+  </div>
+</div>
+<div class="card"><h2>Latest tasks</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Title</th><th>Priority</th><th>Status</th><th>Notes</th><th>Created</th></tr></thead>
+  <tbody>
+  {% for t in tasks %}
+  <tr><td><a href="{% url 'adminpanel:task_detail' t.pk %}">{{ t.title|truncatechars:50 }}</a></td>
+      <td>{{ t.priority }}</td>
+      <td>{% if t.trashed_at %}<span class="badge red">trashed</span>{% elif t.archived %}<span class="badge amber">archived</span>{% elif t.completed %}<span class="badge green">done</span>{% else %}<span class="badge">pending</span>{% endif %}</td>
+      <td>{{ t.note_count }}</td><td class="muted">{{ t.created_at|date:"d M Y" }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="muted">No tasks.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+<div class="card"><h2>Files {% if file_total > 50 %}<span class="muted">(latest 50 of {{ file_total }})</span>{% endif %}</h2>
+  {% include "adminpanel/_attachment_table.html" with attachments=files %}
+</div>
+{% endblock %}

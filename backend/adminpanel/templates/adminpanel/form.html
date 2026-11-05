@@ -1,0 +1,13 @@
+{% extends "adminpanel/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ title }}</h1></div>
+<div class="card narrow">
+  <form method="post"{% if form.is_multipart %} enctype="multipart/form-data"{% endif %}>
+    {% csrf_token %}
+    {% include "adminpanel/_form_fields.html" %}
+    <button class="btn" type="submit">{{ submit_label|default:"Save changes" }}</button>
+    <a class="btn btn-ghost" href="{{ cancel_url }}">Cancel</a>
+  </form>
+</div>
+{% endblock %}

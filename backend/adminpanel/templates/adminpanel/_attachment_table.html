@@ -1,0 +1,25 @@
+<div class="table-wrap">
+<table>
+  <thead><tr><th>File</th><th>Task</th><th>Note</th><th>Uploaded by</th><th>Size</th><th>Added</th><th></th></tr></thead>
+  <tbody>
+  {% for a in attachments %}
+  <tr>
+    <td><a href="{% url 'adminpanel:attachment_download' a.pk %}" target="_blank" rel="noopener">{{ a.original_name }}</a></td>
+    <td><a href="{% url 'adminpanel:task_detail' a.task_id %}">{{ a.task.title|truncatechars:30 }}</a></td>
+    <td>{% if a.note %}{{ a.note.title|truncatechars:24 }}{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td>{{ a.uploaded_by.username }}</td>
+    <td>{% if a.size is None %}<span class="badge red">missing</span>{% else %}{{ a.size|filesizeformat }}{% endif %}</td>
+    <td class="muted">{{ a.created_at|date:"d M Y, H:i" }}</td>
+    <td class="actions">
+      <a class="btn btn-ghost btn-sm" href="{% url 'adminpanel:attachment_download' a.pk %}?download=1">Download</a>
+      <a class="btn btn-ghost btn-sm" href="{% url 'adminpanel:attachment_edit' a.pk %}">Edit</a>
+      {% url 'adminpanel:attachment_delete' a.pk as del_url %}
+      {% include "adminpanel/_post_button.html" with url=del_url label="Delete" cls="btn-danger" confirm="Permanently delete this file?" next=request.get_full_path %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="7" class="muted">No attachments.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

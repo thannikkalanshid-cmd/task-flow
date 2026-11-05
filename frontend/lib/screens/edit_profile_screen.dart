@@ -73,7 +73,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF08122A), Color(0xFF0F172A)],
+            colors: [Color(0xFF070B1E), Color(0xFF0A1230)],
           ),
         ),
         child: SafeArea(
@@ -83,7 +83,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF111827),
+                  color: const Color(0xFF111B3A),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: Colors.white12),
                 ),

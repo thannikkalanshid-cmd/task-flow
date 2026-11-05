@@ -232,11 +232,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         MaterialPageRoute(
             builder: (_) => NoteEditorScreen(
                 taskId: widget.task.id, token: widget.token, note: note)));
-    if (changed == true) {
-      await _loadNotes();
-      if (mounted)
-        _showMessage(note == null ? 'Note created' : 'Notes updated');
-    }
+    // Always reload: attachments are saved immediately, even if Save wasn't tapped.
+    await _loadNotes();
+    if (changed == true && mounted)
+      _showMessage(note == null ? 'Note created' : 'Notes updated');
   }
 
   Widget _buildNotesSection() {
@@ -262,7 +261,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-                color: const Color(0xFF111827),
+                color: const Color(0xFF111B3A),
                 borderRadius: BorderRadius.circular(12)),
             child: Column(children: [
               const Text('No notes yet',
@@ -274,7 +273,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ]))
       else
         ..._taskNotes.map((note) => Card(
-            color: const Color(0xFF111827),
+            color: const Color(0xFF111B3A),
             child: ListTile(
               leading: const Icon(Icons.sticky_note_2_outlined,
                   color: Color(0xFF818CF8)),
@@ -282,7 +281,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text(note.content.isEmpty ? 'No content' : note.content,
                   maxLines: 2, overflow: TextOverflow.ellipsis),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (note.attachments.isNotEmpty) ...[
+                  const Icon(Icons.attach_file, size: 16, color: Colors.white54),
+                  Text('${note.attachments.length}',
+                      style: const TextStyle(color: Colors.white54)),
+                  const SizedBox(width: 4),
+                ],
+                const Icon(Icons.chevron_right),
+              ]),
               onTap: () => _openNoteEditor(note),
             ))),
     ]);
@@ -487,7 +494,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF111827),
+                      color: const Color(0xFF111B3A),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -563,7 +570,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF111827),
+                              color: const Color(0xFF111B3A),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: Colors.white24,
@@ -600,7 +607,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF111827),
+                              color: const Color(0xFF111B3A),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: Colors.white24,
@@ -651,7 +658,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     decoration: InputDecoration(
                       hintText: 'Enter task description',
                       filled: true,
-                      fillColor: const Color(0xFF111827),
+                      fillColor: const Color(0xFF111B3A),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -729,7 +736,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           decoration: InputDecoration(
                             hintText: 'Add checklist item',
                             filled: true,
-                            fillColor: const Color(0xFF111827),
+                            fillColor: const Color(0xFF111B3A),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -772,7 +779,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             style: TextStyle(color: Colors.white54)))
                   else
                     ..._attachments.map((attachment) => Card(
-                          color: const Color(0xFF111827),
+                          color: const Color(0xFF111B3A),
                           child: ListTile(
                             leading: Icon(attachment.originalName
                                     .toLowerCase()
@@ -829,7 +836,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF111827),
+        color: const Color(0xFF111B3A),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -886,7 +893,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF111827),
+            color: const Color(0xFF111B3A),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white24),
           ),
@@ -904,7 +911,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ))
                 .toList(),
             onChanged: (val) => onChanged(val ?? items.first),
-            dropdownColor: const Color(0xFF111827),
+            dropdownColor: const Color(0xFF111B3A),
           ),
         ),
       ],

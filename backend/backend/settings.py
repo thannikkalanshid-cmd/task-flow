@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from dotenv import dotenv_values
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -27,6 +28,7 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     'users',
     'tasks',
+    'adminpanel',
 ]
 
 MIDDLEWARE = [
@@ -94,6 +96,28 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# SMTP values may be stored in backend/.env without applying unrelated .env
+# values to local Django settings. OS environment variables take precedence.
+_email_env = dotenv_values(BASE_DIR / '.env')
+
+
+def _email_setting(name, default=''):
+    return os.environ.get(name, _email_env.get(name, default))
+
+
+EMAIL_HOST = _email_setting('DJANGO_EMAIL_HOST')
+EMAIL_BACKEND = _email_setting(
+    'DJANGO_EMAIL_BACKEND',
+    'django.core.mail.backends.smtp.EmailBackend'
+    if EMAIL_HOST
+    else 'django.core.mail.backends.console.EmailBackend',
+)
+EMAIL_PORT = int(_email_setting('DJANGO_EMAIL_PORT', '587'))
+EMAIL_HOST_USER = _email_setting('DJANGO_EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = _email_setting('DJANGO_EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = _email_setting('DJANGO_EMAIL_USE_TLS', 'True') == 'True'
+DEFAULT_FROM_EMAIL = _email_setting('DJANGO_DEFAULT_FROM_EMAIL', 'TaskFlow <no-reply@taskflow.local>')
 
 AUTH_USER_MODEL = 'users.CustomUser'
 

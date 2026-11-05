@@ -1,0 +1,45 @@
+{% extends "adminpanel/base.html" %}
+{% block title %}Tasks{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Tasks{% if owner_user %} <span class="muted">· {{ owner_user.username }}</span>{% endif %}</h1>
+  <a class="btn" href="{% url 'adminpanel:task_add' %}{% if owner_user %}?owner={{ owner_user.pk }}{% endif %}">+ Add task</a></div>
+<form class="toolbar" method="get">
+  <input name="q" value="{{ q }}" placeholder="Search title, description or owner">
+  {% if owner %}<input type="hidden" name="owner" value="{{ owner }}">{% endif %}
+  <select name="status">
+    <option value="">Any status</option>
+    {% for key, label in status_options %}<option value="{{ key }}"{% if status == key %} selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="priority">
+    <option value="">Any priority</option>
+    <option value="high"{% if priority == 'high' %} selected{% endif %}>High</option>
+    <option value="medium"{% if priority == 'medium' %} selected{% endif %}>Medium</option>
+    <option value="low"{% if priority == 'low' %} selected{% endif %}>Low</option>
+  </select>
+  <button class="btn">Filter</button>
+  {% if q or status or priority or owner %}<a class="btn btn-ghost" href="{% url 'adminpanel:task_list' %}">Clear</a>{% endif %}
+</form>
+<div class="card table-wrap">
+<table>
+  <thead><tr><th>Title</th><th>Owner</th><th>Priority</th><th>Status</th><th>Due</th><th>Notes</th><th>Files</th><th></th></tr></thead>
+  <tbody>
+  {% for t in page %}
+  <tr>
+    <td><a href="{% url 'adminpanel:task_detail' t.pk %}">{{ t.title|truncatechars:46 }}</a></td>
+    <td><a href="{% url 'adminpanel:user_detail' t.owner_id %}">{{ t.owner.username }}</a></td>
+    <td>{{ t.priority }}</td>
+    <td>{% if t.trashed_at %}<span class="badge red">trashed</span>{% elif t.archived %}<span class="badge amber">archived</span>{% elif t.completed %}<span class="badge green">done</span>{% else %}<span class="badge">pending</span>{% endif %}</td>
+    <td class="muted">{{ t.due_date|date:"d M Y"|default:"—" }}</td>
+    <td>{{ t.note_count }}</td><td>{{ t.file_count }}</td>
+    <td class="actions">
+      <a class="btn btn-ghost btn-sm" href="{% url 'adminpanel:task_detail' t.pk %}">Edit</a>
+      {% url 'adminpanel:task_delete' t.pk as del_url %}
+      {% include "adminpanel/_post_button.html" with url=del_url label="Delete" cls="btn-danger" confirm="Permanently delete this task with its notes and files?" next=request.get_full_path %}
+    </td>
+  </tr>
+  {% empty %}<tr><td colspan="8" class="muted">No tasks match.</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% include "adminpanel/_pager.html" %}
+</div>
+{% endblock %}

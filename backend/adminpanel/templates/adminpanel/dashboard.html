@@ -1,0 +1,42 @@
+{% extends "adminpanel/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Dashboard</h1>
+  <div class="row-actions"><a class="btn" href="{% url 'adminpanel:user_add' %}">+ Add user</a><a class="btn btn-ghost" href="{% url 'adminpanel:task_add' %}">+ Add task</a></div>
+</div>
+<div class="grid">
+  <div class="stat"><b>{{ stats.users }}</b><span>Users</span></div>
+  <div class="stat"><b>{{ stats.active_users }}</b><span>Active</span></div>
+  <div class="stat"><b>{{ stats.blocked_users }}</b><span>Blocked</span></div>
+  <div class="stat"><b>{{ stats.staff_users }}</b><span>Admins</span></div>
+  <div class="stat"><b>{{ stats.tasks }}</b><span>Tasks</span></div>
+  <div class="stat"><b>{{ stats.completed }}</b><span>Completed</span></div>
+  <div class="stat"><b>{{ stats.archived }}</b><span>Archived</span></div>
+  <div class="stat"><b>{{ stats.trashed }}</b><span>In trash</span></div>
+  <div class="stat"><b>{{ stats.notes }}</b><span>Notes</span></div>
+  <div class="stat"><b>{{ stats.attachments }}</b><span>Attachments</span></div>
+  <div class="stat"><b>{{ stats.storage|filesizeformat }}</b><span>File storage</span></div>
+  <div class="stat"><b>{{ stats.comments }}</b><span>Comments</span></div>
+</div>
+<div class="two">
+  <div class="card"><h2>Newest users</h2>
+    <div class="table-wrap"><table><tbody>
+    {% for u in recent_users %}
+      <tr><td><a href="{% url 'adminpanel:user_detail' u.pk %}">{{ u.username }}</a>{% if not u.is_active %} <span class="badge red">blocked</span>{% endif %}</td>
+      <td class="muted">{{ u.date_joined|date:"d M Y" }}</td></tr>
+    {% empty %}<tr><td class="muted">No users.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+  <div class="card"><h2>Latest tasks</h2>
+    <div class="table-wrap"><table><tbody>
+    {% for t in recent_tasks %}
+      <tr><td><a href="{% url 'adminpanel:task_detail' t.pk %}">{{ t.title|truncatechars:34 }}</a></td>
+      <td class="muted">{{ t.owner.username }}</td></tr>
+    {% empty %}<tr><td class="muted">No tasks.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+<div class="card"><h2>Latest uploads</h2>
+  {% include "adminpanel/_attachment_table.html" with attachments=recent_files %}
+</div>
+{% endblock %}

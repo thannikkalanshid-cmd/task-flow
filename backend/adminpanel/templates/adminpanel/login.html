@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin sign in · TaskFlow</title>
+{% include "adminpanel/_theme.html" %}
+</head>
+<body>
+<main class="stage">
+<form class="card login" id="login" method="post">
+  {% csrf_token %}
+  <div class="brand">TaskFlow <span>Admin</span></div>
+  <p>Sign in with an administrator account.</p>
+  {% if error %}<div class="err-box">{{ error }}</div>{% endif %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="field"><label for="u">Username</label>
+  <input id="u" name="username" autocomplete="username" autofocus required></div>
+  <div class="field"><label for="p">Password</label>
+  <input id="p" type="password" name="password" autocomplete="current-password" required></div>
+  <button class="btn" type="submit">Sign in</button>
+</form>
+</main>
+<script>
+(function(){
+  var f=document.getElementById('login'),s=f.parentNode;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  s.addEventListener('mousemove',function(e){
+    var x=(e.clientX/innerWidth-.5)*2,y=(e.clientY/innerHeight-.5)*2;
+    f.style.transform='rotateY('+(x*7)+'deg) rotateX('+(-y*7)+'deg)';
+  });
+  s.addEventListener('mouseleave',function(){f.style.transform='';});
+})();
+</script>
+</body>
+</html>
